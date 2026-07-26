@@ -2,10 +2,23 @@ import { useMemo, useState } from "react";
 import { Boxes, Calculator, LayoutTemplate } from "lucide-react";
 import { ActionButton, Field, Metric, Panel, SelectInput, Tag, Toggle } from "./primitives";
 import { FIXTURES } from "@/lib/hydro-data";
+import { runRevitScript } from "@/lib/revit-api";
 
 export function TabEsg() {
+  const [loading, setLoading] = useState<string | null>(null);
   const [slope, setSlope] = useState("1,0% — DN 100 (coletor / prumada)");
   const [shaft, setShaft] = useState(true);
+
+  const handleAction = async (script: string, desc: string) => {
+    setLoading(desc);
+    const res = await runRevitScript(script, desc);
+    setLoading(null);
+    if (res.status === "success") {
+      alert(`✅ ${desc} concluído com sucesso no Revit!\n\n` + res.output);
+    } else {
+      alert(`⚠️ Aviso ao executar ${desc}:\n` + (res.error || res.output));
+    }
+  };
 
   const uhc = useMemo(() => FIXTURES.reduce((a, f) => a + f.uhc * f.qtd, 0), []);
   const gordura = 2 * 4 * 20 + 20;
@@ -56,12 +69,28 @@ export function TabEsg() {
       </Panel>
 
       <div className="glass flex flex-wrap items-center gap-3 rounded-2xl p-4">
-        <ActionButton icon={<Calculator className="h-4 w-4" />}>Calcula Esgoto NBR 8160</ActionButton>
-        <ActionButton variant="emerald" icon={<Boxes className="h-4 w-4" />}>
-          Gera Rede 3D por Gravidade no Revit
+        <ActionButton
+          icon={<Calculator className="h-4 w-4" />}
+          disabled={loading !== null}
+          onClick={() => handleAction("m2_dimensionamento_esg.py", "Dimensionamento Esgoto")}
+        >
+          {loading === "Dimensionamento Esgoto" ? "Calculando..." : "Calcula Esgoto NBR 8160"}
         </ActionButton>
-        <ActionButton variant="secondary" icon={<LayoutTemplate className="h-4 w-4" />}>
-          Pranchas de Detalhes ESG
+        <ActionButton
+          variant="emerald"
+          icon={<Boxes className="h-4 w-4" />}
+          disabled={loading !== null}
+          onClick={() => handleAction("m6_rede_esgoto.py", "Modelagem 3D Esgoto")}
+        >
+          {loading === "Modelagem 3D Esgoto" ? "Gerando 3D..." : "Gera Rede 3D por Gravidade no Revit"}
+        </ActionButton>
+        <ActionButton
+          variant="secondary"
+          icon={<LayoutTemplate className="h-4 w-4" />}
+          disabled={loading !== null}
+          onClick={() => handleAction("m7_gerar_pranchas.py", "Pranchas ESG")}
+        >
+          {loading === "Pranchas ESG" ? "Gerando Pranchas..." : "Pranchas de Detalhes ESG"}
         </ActionButton>
         <p className="text-xs text-muted-foreground">Cozinha 04/001 · Banheiro 08/001</p>
       </div>

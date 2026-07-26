@@ -2,12 +2,25 @@ import { useMemo, useState } from "react";
 import { Calculator, Zap } from "lucide-react";
 import { ActionButton, Field, Metric, Panel, Tag, TextInput } from "./primitives";
 import { fmt } from "@/lib/hydro-data";
+import { runRevitScript } from "@/lib/revit-api";
 
 export function TabPump() {
+  const [loading, setLoading] = useState<string | null>(null);
   const [amt, setAmt] = useState(18);
   const [tempo, setTempo] = useState(1.5);
   const [volume, setVolume] = useState(1800);
   const [rend, setRend] = useState(55);
+
+  const handleAction = async (script: string, desc: string) => {
+    setLoading(desc);
+    const res = await runRevitScript(script, desc);
+    setLoading(null);
+    if (res.status === "success") {
+      alert(`✅ ${desc} concluído com sucesso no Revit!\n\n` + res.output);
+    } else {
+      alert(`⚠️ Aviso ao executar ${desc}:\n` + (res.error || res.output));
+    }
+  };
 
   const r = useMemo(() => {
     const vazaoLs = volume / (tempo * 3600);
@@ -74,8 +87,13 @@ export function TabPump() {
       </Panel>
 
       <div className="glass flex flex-wrap items-center gap-3 rounded-2xl p-4">
-        <ActionButton icon={<Calculator className="h-4 w-4" />}>Dimensiona Conjunto Elevatório</ActionButton>
-        <ActionButton variant="secondary">Inserir Bomba no Modelo Revit</ActionButton>
+        <ActionButton
+          icon={<Calculator className="h-4 w-4" />}
+          disabled={loading !== null}
+          onClick={() => handleAction("m2_dimensionamento_bomba.py", "Dimensionamento Moto-Bomba")}
+        >
+          {loading === "Dimensionamento Moto-Bomba" ? "Calculando..." : "Dimensiona Conjunto Elevatório"}
+        </ActionButton>
       </div>
     </div>
   );

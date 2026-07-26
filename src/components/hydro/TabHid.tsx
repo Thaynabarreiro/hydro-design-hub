@@ -11,12 +11,26 @@ import {
 } from "./primitives";
 import { FIXTURES, fmt } from "@/lib/hydro-data";
 
+import { runRevitScript } from "@/lib/revit-api";
+
 export function TabHid() {
+  const [loading, setLoading] = useState<string | null>(null);
   const [pavimentos, setPavimentos] = useState(3);
   const [percapita, setPercapita] = useState(150);
   const [habitantes, setHabitantes] = useState(12);
   const [dias, setDias] = useState(2);
   const [tipo, setTipo] = useState("Recalque (inferior + superior)");
+
+  const handleAction = async (script: string, desc: string) => {
+    setLoading(desc);
+    const res = await runRevitScript(script, desc);
+    setLoading(null);
+    if (res.status === "success") {
+      alert(`✅ ${desc} concluído com sucesso no Revit!\n\n` + res.output);
+    } else {
+      alert(`⚠️ Aviso ao executar ${desc}:\n` + (res.error || res.output));
+    }
+  };
 
   const calc = useMemo(() => {
     const consumoDiario = percapita * habitantes;
@@ -150,14 +164,28 @@ export function TabHid() {
       </Panel>
 
       <div className="glass flex flex-wrap items-center gap-3 rounded-2xl p-4">
-        <ActionButton icon={<Calculator className="h-4 w-4" />}>
-          Calcula & Dimensiona AF/AQ
+        <ActionButton
+          icon={<Calculator className="h-4 w-4" />}
+          disabled={loading !== null}
+          onClick={() => handleAction("m2_dimensionamento.py", "Dimensionamento AF/AQ")}
+        >
+          {loading === "Dimensionamento AF/AQ" ? "Calculando..." : "Calcula & Dimensiona AF/AQ"}
         </ActionButton>
-        <ActionButton variant="emerald" icon={<Boxes className="h-4 w-4" />}>
-          Gera Rede 3D Ortogonal no Revit
+        <ActionButton
+          variant="emerald"
+          icon={<Boxes className="h-4 w-4" />}
+          disabled={loading !== null}
+          onClick={() => handleAction("m6g_rede_final.py", "Modelagem 3D AF/AQ")}
+        >
+          {loading === "Modelagem 3D AF/AQ" ? "Gerando 3D..." : "Gera Rede 3D Ortogonal no Revit"}
         </ActionButton>
-        <ActionButton variant="secondary" icon={<LayoutTemplate className="h-4 w-4" />}>
-          Gera Pranchas A4 por Ambiente
+        <ActionButton
+          variant="secondary"
+          icon={<LayoutTemplate className="h-4 w-4" />}
+          disabled={loading !== null}
+          onClick={() => handleAction("m7_gerar_pranchas.py", "Geração de Pranchas")}
+        >
+          {loading === "Geração de Pranchas" ? "Gerando Pranchas..." : "Gera Pranchas A4 por Ambiente"}
         </ActionButton>
         <p className="text-xs text-muted-foreground">
           Curvas a 90° · descidas de parede · Banheiro / Lavanderia / Cobertura
